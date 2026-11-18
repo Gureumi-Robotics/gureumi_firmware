@@ -52,11 +52,13 @@ std_msgs__msg__String motorStatusMessage;
 rcl_allocator_t allocator = rcl_get_default_allocator();
 rclc_support_t support;
 unsigned long previousHeartbeatTime = 0;
+unsigned long motor_commant_timer_ = 0;
 Esp32Status esp_status;
 
 void motor_command_callback(const void *message) {
     const auto *command = static_cast<const std_msgs__msg__String *>(message);
     receivedMotorCommand = command->data.data;
+
     if (receivedMotorCommand == "forward") {
         ledcWrite(M2B_27, 0);
         ledcWrite(M1A_25, 0);
@@ -73,6 +75,7 @@ void motor_command_callback(const void *message) {
         ledcWrite(M1A_25, 0);
         ledcWrite(M2A_14, 0);
     }
+    motor_commant_timer_ = millis();
 }
 
 void setup() {
@@ -206,6 +209,7 @@ void setup() {
 void loop() {
     rclc_executor_spin_some(&executor, RCL_MS_TO_NS(1));
 
+
     unsigned long now = millis();
     if (now - previousHeartbeatTime >= 1000) {
         esp_status.esp32 = 1;
@@ -239,7 +243,7 @@ void loop() {
     }
 
     unsigned long elapsedMs = now - previousSpeedTime;
-
+    // 0.1초 이상 지나면 코드 실행
     if (elapsedMs >= 100) {
         // 현재 카운트
         long long rightCount = rightEncoder.getCount();
@@ -277,36 +281,43 @@ void loop() {
             ledcWrite(M2A_14, motor2_pwm);
         }
 
-
         previousRightEncoderCount = rightCount;
         previousLeftEncoderCount = leftCount;
         previousSpeedTime = now;
+
+        if (now - motor_commant_timer_ >= 300) {
+            receivedMotorCommand = "stop";
+            ledcWrite(M1A_25, 0);
+            ledcWrite(M1B_26, 0);
+            ledcWrite(M2A_14, 0);
+            ledcWrite(M2B_27, 0);
+        }
+
+
+        // // 양쪽 바퀴 회전
+
+        // delay(5000);
+
+        // 두 출력을 모두 꺼서 5초 정지한다.
+        // ledcWrite(M1A_25, 0);
+        // ledcWrite(M1B_26, 0);
+        // ledcWrite(M2A_14, 0);
+        // ledcWrite(M2B_27, 0);
+        // delay(5000);
+
+
+        // // 뒤로 회전 양쪽
+        // ledcWrite(M1A_25, 0);
+        // ledcWrite(M2A_14, 0);
+        // ledcWrite(M1B_26, PWM_OUTPUT);
+        // ledcWrite(M2B_27, PWM_OUTPUT);
+        // delay(5000);
+
+        // 두 출력을 모두 꺼서 5초 정지한다.
+        // ledcWrite(M1A_25, 0);
+        // ledcWrite(M1B_26, 0);
+        // ledcWrite(M2A_14, 0);
+        // ledcWrite(M2B_27, 0);esp32_status_sub_
+        // delay(5000);
     }
-
-
-    // // 양쪽 바퀴 회전
-
-    // delay(5000);
-
-    // 두 출력을 모두 꺼서 5초 정지한다.
-    // ledcWrite(M1A_25, 0);
-    // ledcWrite(M1B_26, 0);
-    // ledcWrite(M2A_14, 0);
-    // ledcWrite(M2B_27, 0);
-    // delay(5000);
-
-
-    // // 뒤로 회전 양쪽
-    // ledcWrite(M1A_25, 0);
-    // ledcWrite(M2A_14, 0);
-    // ledcWrite(M1B_26, PWM_OUTPUT);
-    // ledcWrite(M2B_27, PWM_OUTPUT);
-    // delay(5000);
-
-    // 두 출력을 모두 꺼서 5초 정지한다.
-    // ledcWrite(M1A_25, 0);
-    // ledcWrite(M1B_26, 0);
-    // ledcWrite(M2A_14, 0);
-    // ledcWrite(M2B_27, 0);esp32_status_sub_
-    // delay(5000);
 }
